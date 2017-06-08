@@ -1,10 +1,12 @@
+'use strict';
+
 const bodyParser = require('body-parser');
 const express = require('express');
 const mongoose = require('mongoose');
 const morgan = require('morgan');
 
 const {DATABASE_URL, PORT} = require('./config');
-const {BlogPost} = require('./models');
+const {BlogPost, User} = require('./models');
 
 const app = express();
 
@@ -12,6 +14,78 @@ app.use(morgan('common'));
 app.use(bodyParser.json());
 
 mongoose.Promise = global.Promise;
+
+
+app.post('/users', (req, res) => {
+  if (!req.body) {
+    return res.status(400).json({message: 'No request body'});
+  }
+
+  if (!('username' in req.body)) {
+    return res.status(422).json({message: 'Missing field: username'});
+  }
+
+  let {username, password, firstName, lastName} = req.body;
+
+  if (typeof username !== 'string') {
+    return res.status(422).json({message: 'Incorrect field type: username'});
+  }
+
+  username = username.trim();
+
+  if (username === '') {
+    return res.status(422).json({message: 'Incorrect field length: username'});
+  }
+
+  if (!(password)) {
+    return res.status(422).json({message: 'Missing field: password'});
+  }
+
+  if (typeof password !== 'string') {
+    return res.status(422).json({message: 'Incorrect field type: password'});
+  }
+
+  password = password.trim();
+
+  if (password === '') {
+    return res.status(422).json({message: 'Incorrect field length: password'});
+  }
+
+  // check for existing user
+  return User
+    .find({username})
+    .count()
+    .exec()
+    .then(count => {
+      if (count > 0) {
+        return Promise.reject({
+          name: 'AuthenticationError',
+          message: 'username already taken'
+        });
+      }
+      // if no existing user, hash password
+      return User.hashPassword(password);
+    })
+    .then(hash => {
+      return User
+        .create({
+          username: username,
+          password: hash,
+          firstName: firstName,
+          lastName: lastName
+        });
+    })
+    .then(user => {
+      return res.status(201).json(user.apiRepr());
+    })
+    .catch(err => {
+      if (err.name === 'AuthenticationError') {
+        return res.status(422).json({message: err.message});
+      }
+      res.status(500).json({message: 'Internal server error'});
+    });
+});
+
 
 
 app.get('/posts', (req, res) => {
