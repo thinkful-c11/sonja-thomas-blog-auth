@@ -4,6 +4,8 @@ const bodyParser = require('body-parser');
 const express = require('express');
 const mongoose = require('mongoose');
 const morgan = require('morgan');
+const passport = require('passport');
+const {BasicStrategy} = require('passport-http');
 
 const {DATABASE_URL, PORT} = require('./config');
 const {BlogPost, User} = require('./models');
@@ -15,6 +17,36 @@ app.use(bodyParser.json());
 
 mongoose.Promise = global.Promise;
 
+const basicStrategy = new BasicStrategy((username, password, callback) => {
+  let user;
+  console.log(username, password);
+  User
+    .findOne({username: username})
+    .exec()
+    .then(_user => {
+      user = _user;
+      if (!user) {
+        return callback(null, false);
+      }
+      console.log(user);
+      //console.log(user.password);
+      //console.log(password);
+      return user.validatePassword(password);
+    })
+    .then(isValid => {
+      console.log(isValid);
+      if (!isValid) {
+        return callback(null, false);
+      }
+      else {
+        return callback(null, user);
+      }
+    })
+    .catch(err => callback(err));
+});
+
+passport.use(basicStrategy);
+app.use(passport.initialize());
 
 app.post('/users', (req, res) => {
   if (!req.body) {
@@ -86,6 +118,11 @@ app.post('/users', (req, res) => {
     });
 });
 
+app.get('/users/me',
+  passport.authenticate('basic', {session: false}),
+  (req, res) => res.json({user: req.user.apiRepr()})
+);
+
 
 
 app.get('/posts', (req, res) => {
@@ -112,22 +149,25 @@ app.get('/posts/:id', (req, res) => {
     });
 });
 
-app.post('/posts', (req, res) => {
-  const requiredFields = ['title', 'content', 'author'];
+app.post('/posts', passport.authenticate('basic', {session: false}) ,(req, res) => {
+  const requiredFields = ['title', 'content'];
   for (let i=0; i<requiredFields.length; i++) {
     const field = requiredFields[i];
     if (!(field in req.body)) {
-      const message = `Missing \`${field}\` in request body`
+      const message = `Missing \`${field}\` in request body`;
       console.error(message);
       return res.status(400).send(message);
     }
   }
+  console.log(req.user.firstName);
+  console.log(req.user.lastName);
 
+  const authorName = `${req.user.firstName} ${req.user.lastName}`;
   BlogPost
     .create({
       title: req.body.title,
       content: req.body.content,
-      author: req.body.author
+      author: {firstName:req.user.firstName, lastName:req.user.lastName}
     })
     .then(blogPost => res.status(201).json(blogPost.apiRepr()))
     .catch(err => {
@@ -138,7 +178,7 @@ app.post('/posts', (req, res) => {
 });
 
 
-app.delete('/posts/:id', (req, res) => {
+app.delete('/posts/:id', passport.authenticate('basic', {session: false}) ,(req, res) => {
   BlogPost
     .findByIdAndRemove(req.params.id)
     .exec()
@@ -152,7 +192,7 @@ app.delete('/posts/:id', (req, res) => {
 });
 
 
-app.put('/posts/:id', (req, res) => {
+app.put('/posts/:id', passport.authenticate('basic', {session: false}) ,(req, res) => {
   if (!(req.params.id && req.body.id && req.params.id === req.body.id)) {
     res.status(400).json({
       error: 'Request path id and request body id values must match'
@@ -176,7 +216,7 @@ app.put('/posts/:id', (req, res) => {
 
 
 app.delete('/:id', (req, res) => {
-  BlogPosts
+  BlogPost
     .findByIdAndRemove(req.params.id)
     .exec()
     .then(() => {
