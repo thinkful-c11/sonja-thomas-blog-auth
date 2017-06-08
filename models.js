@@ -1,5 +1,25 @@
 const mongoose = require('mongoose');
 
+const UserSchema = mongoose.Schema({
+  username: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  firstName: {
+    type: String,
+    default: ''
+  },
+  lastName: {
+    type: String,
+    default: ''
+  }
+});
+
 const blogPostSchema = mongoose.Schema({
   author: {
     firstName: String,
@@ -23,7 +43,7 @@ blogPostSchema.methods.apiRepr = function() {
     title: this.title,
     created: this.created
   };
-}
+};
 
 const BlogPost = mongoose.model('BlogPost', blogPostSchema);
 
