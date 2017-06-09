@@ -26,7 +26,7 @@ const basicStrategy = new BasicStrategy((username, password, callback) => {
       user = _user;
       if (!user) {
         console.log('user is falsy?');
-        return callback(null, false);
+        return false; //callback(null, false);
       }
       console.log(user);
       //console.log(user.password);
@@ -34,14 +34,16 @@ const basicStrategy = new BasicStrategy((username, password, callback) => {
       return user.validatePassword(password);
     })
     .then(isValid => {
-      console.log(isValid);
-      if (!isValid && user) {
-        console.log('not valid');
-        return callback(null, false);
-      }
-      else if (isValid && user){
-        return callback(null, user);
-      }
+      
+      callback(null, isValid && user);
+      // console.log(isValid);
+      // if (!isValid ){ //&& user) {
+      //   console.log('not valid');
+      //   return callback(null, false);
+      // }
+      // else {//if (isValid && user){
+      //   return callback(null, user);
+      // }
     })
     .catch(err => callback(err));
 });
