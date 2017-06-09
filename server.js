@@ -25,6 +25,7 @@ const basicStrategy = new BasicStrategy((username, password, callback) => {
     .then(_user => {
       user = _user;
       if (!user) {
+        console.log('user is falsy?');
         return callback(null, false);
       }
       console.log(user);
@@ -34,10 +35,11 @@ const basicStrategy = new BasicStrategy((username, password, callback) => {
     })
     .then(isValid => {
       console.log(isValid);
-      if (!isValid) {
+      if (!isValid && user) {
+        console.log('not valid');
         return callback(null, false);
       }
-      else {
+      else if (isValid && user){
         return callback(null, user);
       }
     })
@@ -149,12 +151,14 @@ app.get('/posts/:id', (req, res) => {
 });
 
 app.post('/posts', passport.authenticate('basic', {session: false}) ,(req, res) => {
+  console.log('user', req.user);
   const requiredFields = ['title', 'content'];
   for (let i=0; i<requiredFields.length; i++) {
     const field = requiredFields[i];
     if (!(field in req.body)) {
       const message = `Missing \`${field}\` in request body`;
       console.error(message);
+      console.log('Sending 400 again');
       return res.status(400).send(message);
     }
   }
@@ -166,9 +170,11 @@ app.post('/posts', passport.authenticate('basic', {session: false}) ,(req, res) 
       content: req.body.content,
       author: {firstName:req.user.firstName, lastName:req.user.lastName}
     })
-    .then(blogPost => res.status(201).json(blogPost.apiRepr()))
+    .then(blogPost => {
+      //console.log('Are we sending a 201????');
+      res.status(201).json(blogPost.apiRepr());})
     .catch(err => {
-      console.error(err);
+      console.error(`is this is??? ${err}`);
       res.status(500).json({error: 'Something went wrong'});
     });
 

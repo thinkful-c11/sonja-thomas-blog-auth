@@ -147,19 +147,19 @@ describe('blog posts API resource with user authentication', function () {
     // then prove that the post we get back has
     // right keys, and that `id` is there (which means
     // the data was inserted into db)
+    const fakeFName = faker.name.firstName();
+    const fakeLName = faker.name.lastName();
+
+    const newPost = {
+      title: faker.lorem.sentence(),
+      author: {
+        firstName: fakeFName,
+        lastName: fakeLName,
+      },
+      content: faker.lorem.text()
+    };
+
     it('should add a new blog post', function () {
-
-      const fakeFName = faker.name.firstName();
-      const fakeLName = faker.name.lastName();
-
-      const newPost = {
-        title: faker.lorem.sentence(),
-        author: {
-          firstName: fakeFName,
-          lastName: fakeLName,
-        },
-        content: faker.lorem.text()
-      };
 
       let user;
 
@@ -172,7 +172,7 @@ describe('blog posts API resource with user authentication', function () {
       })
         .then(_user => user = _user)
         .then(() => {
-          console.log(user.username);
+          // console.log(user.username);
           return chai.request(app).post('/posts').auth(user.username, 'test-password').send(newPost);
         })
         .then(function (res) {
@@ -198,6 +198,56 @@ describe('blog posts API resource with user authentication', function () {
     });
   });
 
+  describe('POST endpoint credentials', function() {
+    const fakeFName = faker.name.firstName();
+    const fakeLName = faker.name.lastName();
+
+    const newPost = {
+      title: faker.lorem.sentence(),
+      author: {
+        firstName: fakeFName,
+        lastName: fakeLName,
+      },
+      content: faker.lorem.text()
+    };
+
+    it.only('should not let you add if you pass invalid credentials', function() {
+      let user;
+      const uName = faker.internet.userName();
+      const pWord = faker.internet.password();
+      return User.create({
+        username: faker.internet.userName(),
+        // Substitute the hash you generated here
+        // passord is hashed from 'test-password'
+        password: '$2a$10$JW/va21Tev0oCSaQVHTPh.R6fsioI8QlL5MndlEuRPneeYy1GfHVe',
+        firstName: fakeFName,
+        lastName: fakeLName
+      })
+      // faker.internet.userName(), faker.internet.password()
+        .then(_user => user = _user)
+        .then(() => {
+          return chai.request(app).post('/posts').auth(uName, pWord).send(newPost);
+        })
+        .then(function (res) {
+          res.should.not.have.status(201);
+          res.should.not.be.json;
+          res.body.should.not.be.a('object');
+          res.body.should.not.include.keys(
+            'id', 'title', 'content', 'author', 'created');
+          res.body.title.should.not.equal(newPost.title);
+          // cause Mongo should have created id on insertion
+          res.body.id.should.be.null || res.body.id.should.be.undefined;
+          res.body.author.should.not.equal(
+            `${newPost.author.firstName} ${newPost.author.lastName}`);
+          res.body.content.should.not.equal(newPost.content);
+        })
+        .catch(function(err) {
+          // console.error(err);
+          err.should.be.an('error');
+        });
+    });
+  });
+
   describe('POST endpoint for user creation', function(){
     // strategy: make a POST request to create a user,
     // then prove that the user we get back has
@@ -205,7 +255,7 @@ describe('blog posts API resource with user authentication', function () {
     // and that `id` is there (which means
     // the data was inserted into db)
 
-    it.only('should create a user', function(){
+    it('should create a user', function(){
 
       const fakeFName = faker.name.firstName();
       const fakeLName = faker.name.lastName();
@@ -218,7 +268,7 @@ describe('blog posts API resource with user authentication', function () {
         firstName: fakeFName,
         lastName: fakeLName
       };
-    
+
       return chai.request(app)
         .post('/users')
         .send(newUser)
@@ -232,7 +282,7 @@ describe('blog posts API resource with user authentication', function () {
         });
     });
   });
-  
+
 
   describe('PUT endpoint', function () {
 
