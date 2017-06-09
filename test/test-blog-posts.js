@@ -209,9 +209,8 @@ describe('blog posts API resource with user authentication', function () {
 
       const fakeFName = faker.name.firstName();
       const fakeLName = faker.name.lastName();
-      const has = '$2a$10$JW/va21Tev0oCSaQVHTPh.R6fsioI8QlL5MndlEuRPneeYy1GfHVe';
+      const hash = '$2a$10$JW/va21Tev0oCSaQVHTPh.R6fsioI8QlL5MndlEuRPneeYy1GfHVe';
 
-      let testUser;
       const newUser = {
         username: faker.internet.userName(),
         // Substitute the hash you generated here
