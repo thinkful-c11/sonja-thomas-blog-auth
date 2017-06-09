@@ -147,7 +147,7 @@ describe('blog posts API resource', function () {
     // then prove that the post we get back has
     // right keys, and that `id` is there (which means
     // the data was inserted into db)
-    it.only('should add a new blog post', function () {
+    it('should add a new blog post', function () {
 
       const fakeFName = faker.name.firstName();
       const fakeLName = faker.name.lastName();
@@ -184,7 +184,7 @@ describe('blog posts API resource', function () {
           res.body.title.should.equal(newPost.title);
           // cause Mongo should have created id on insertion
           res.body.id.should.not.be.null;
-          res.body.author.should.equal( 
+          res.body.author.should.equal(
             `${newPost.author.firstName} ${newPost.author.lastName}`);
           res.body.content.should.equal(newPost.content);
           return BlogPost.findById(res.body.id).exec();
@@ -205,6 +205,9 @@ describe('blog posts API resource', function () {
     //  2. Make a PUT request to update that post
     //  3. Prove post returned by request contains data we sent
     //  4. Prove post in db is correctly updated
+    const fakeFName = faker.name.firstName();
+    const fakeLName = faker.name.lastName();
+
     it('should update fields you send over', function () {
       const updateData = {
         title: 'cats cats cats',
@@ -214,16 +217,28 @@ describe('blog posts API resource', function () {
           lastName: 'bar'
         }
       };
+      let user;
 
-      return BlogPost
-        .findOne()
-        .exec()
-        .then(post => {
-          updateData.id = post.id;
+      return User.create({
+        username: faker.internet.userName(),
+        // Substitute the hash you generated here
+        password: '$2a$10$JW/va21Tev0oCSaQVHTPh.R6fsioI8QlL5MndlEuRPneeYy1GfHVe',
+        firstName: fakeFName,
+        lastName: fakeLName
+      })
+        .then(_user => user = _user)
+        .then(() => {
+          return BlogPost
+            .findOne()
+            .exec()
+            .then(post => {
+              updateData.id = post.id;
 
-          return chai.request(app)
-            .put(`/posts/${post.id}`)
-            .send(updateData);
+              return chai.request(app)
+                .put(`/posts/${post.id}`)
+                .auth(user.username, 'test-password')
+                .send(updateData);
+            });
         })
         .then(res => {
           res.should.have.status(201);
