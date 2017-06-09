@@ -211,7 +211,7 @@ describe('blog posts API resource with user authentication', function () {
       content: faker.lorem.text()
     };
 
-    it.only('should not let you add if you pass invalid credentials', function() {
+    it('should not let you add if you pass invalid credentials', function() {
       let user;
       const uName = faker.internet.userName();
       const pWord = faker.internet.password();
@@ -346,6 +346,71 @@ describe('blog posts API resource with user authentication', function () {
     });
   });
 
+
+  describe('PUT endpoint', function () {
+
+    // strategy:
+    //  1. Get an existing post from db
+    //  2. Make a PUT request to update that post
+    //  3. Prove post returned by request contains data we sent
+    //  4. Prove post in db is correctly updated
+    const fakeFName = faker.name.firstName();
+    const fakeLName = faker.name.lastName();
+
+    it('should not update fields you send over with improper credentials', function () {
+      const updateData = {
+        title: 'cats cats cats',
+        content: 'dogs dogs dogs',
+        author: {
+          firstName: 'foo',
+          lastName: 'bar'
+        }
+      };
+      let user;
+
+      return User.create({
+        username: faker.internet.userName(),
+        // Substitute the hash you generated here
+        password: '$2a$10$JW/va21Tev0oCSaQVHTPh.R6fsioI8QlL5MndlEuRPneeYy1GfHVe',
+        firstName: fakeFName,
+        lastName: fakeLName
+      })
+        .then(_user => user = _user)
+        .then(() => {
+          return BlogPost
+            .findOne()
+            .exec()
+            .then(post => {
+              updateData.id = post.id;
+
+              return chai.request(app)
+                .put(`/posts/${post.id}`)
+                .auth(faker.internet.userName(), faker.internet.password())
+                .send(updateData);
+            });
+        })
+        .then(res => {
+          res.should.not.have.status(201);
+          res.should.not.be.json;
+          res.body.should.not.be.a('object');
+          res.body.title.should.not.equal(updateData.title);
+          res.body.author.should.not.equal(
+            `${updateData.author.firstName} ${updateData.author.lastName}`);
+          res.body.content.should.not.equal(updateData.content);
+
+        })
+        .catch(function(err) {
+          err.should.be.an('error');
+        });
+    });
+  });
+
+
+
+
+
+
+
   describe('DELETE endpoint', function () {
     // strategy:
     //  1. get a post
@@ -387,6 +452,38 @@ describe('blog posts API resource with user authentication', function () {
           // an error. `should.be.null(_post)` is how we can
           // make assertions about a null value.
           should.not.exist(_post);
+        });
+    });
+
+
+    it('should not delete a post by id with improper credentials', function () {
+
+      let post;
+      let user;
+
+      return User.create({
+        username: faker.internet.userName(),
+        // Substitute the hash you generated here
+        password: '$2a$10$JW/va21Tev0oCSaQVHTPh.R6fsioI8QlL5MndlEuRPneeYy1GfHVe',
+        firstName: fakeFName,
+        lastName: fakeLName
+      })
+        .then(_user => user = _user)
+        .then(() => {
+          return BlogPost
+            .findOne()
+            .exec()
+            .then(_post => {
+              post = _post;
+              return chai.request(app).delete(`/posts/${post.id}`)
+              .auth(faker.internet.userName(), faker.internet.password());
+            });
+        })
+        .then(res => {
+          res.should.not.have.status(204);
+        })
+        .catch(function(err){
+          err.should.be.an('error');
         });
     });
   });
