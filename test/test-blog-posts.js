@@ -63,7 +63,7 @@ function seedBlogPostData() {
 
 
 
-describe('blog posts API resource', function () {
+describe('blog posts API resource with user authentication', function () {
 
   before(function () {
     return runServer(TEST_DATABASE_URL);
@@ -197,6 +197,43 @@ describe('blog posts API resource', function () {
         });
     });
   });
+
+  describe('POST endpoint for user creation', function(){
+    // strategy: make a POST request to create a user,
+    // then prove that the user we get back has
+    // right keys, with the expected hash value,
+    // and that `id` is there (which means
+    // the data was inserted into db)
+
+    it.only('should create a user', function(){
+
+      const fakeFName = faker.name.firstName();
+      const fakeLName = faker.name.lastName();
+      const has = '$2a$10$JW/va21Tev0oCSaQVHTPh.R6fsioI8QlL5MndlEuRPneeYy1GfHVe';
+
+      let testUser;
+      const newUser = {
+        username: faker.internet.userName(),
+        // Substitute the hash you generated here
+        password: 'test-password',
+        firstName: fakeFName,
+        lastName: fakeLName
+      };
+    
+      return chai.request(app)
+        .post('/users')
+        .send(newUser)
+        .then(function(res){
+          res.should.have.status(201);
+          res.should.be.json;
+          res.body.should.be.a('object');
+          res.body.should.include.keys(
+            'username', 'firstName', 'lastName');
+          res.body.username.should.equal(newUser.username);
+        });
+    });
+  });
+  
 
   describe('PUT endpoint', function () {
 
