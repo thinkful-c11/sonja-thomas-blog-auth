@@ -266,16 +266,30 @@ describe('blog posts API resource', function () {
     //  2. make a DELETE request for that post's id
     //  3. assert that response has right status code
     //  4. prove that post with the id doesn't exist in db anymore
+    const fakeFName = faker.name.firstName();
+    const fakeLName = faker.name.lastName();
+
     it('should delete a post by id', function () {
 
       let post;
+      let user;
 
-      return BlogPost
-        .findOne()
-        .exec()
-        .then(_post => {
-          post = _post;
-          return chai.request(app).delete(`/posts/${post.id}`);
+      return User.create({
+        username: faker.internet.userName(),
+        // Substitute the hash you generated here
+        password: '$2a$10$JW/va21Tev0oCSaQVHTPh.R6fsioI8QlL5MndlEuRPneeYy1GfHVe',
+        firstName: fakeFName,
+        lastName: fakeLName
+      })
+        .then(_user => user = _user)
+        .then(() => {
+          return BlogPost
+            .findOne()
+            .exec()
+            .then(_post => {
+              post = _post;
+              return chai.request(app).delete(`/posts/${post.id}`).auth(user.username, 'test-password');
+            });
         })
         .then(res => {
           res.should.have.status(204);
